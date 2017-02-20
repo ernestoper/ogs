@@ -94,6 +94,21 @@ AddTest(
     mesh2D.vtu gravity_driven_pcs_1_ts_5_t_300.000000.vtu v_y_ref v_y
 )
 
+AddTest(
+    NAME StaggeredTH_ThermalConvectionFlow2D
+    PATH StaggeredCoupledProcesses/TH/ThermalConvection2D
+    EXECUTABLE ogs
+    EXECUTABLE_ARGS quad_5500x5500.prj
+    WRAPPER time
+    TESTER vtkdiff
+    REQUIREMENTS NOT OGS_USE_MPI
+    ABSTOL 1e-6 RELTOL 1e-6
+    DIFF_DATA
+    square_5500x5500.vtu ConstViscosityThermalConvection_pcs_1_ts_149_t_50000000000.000000.vtu pressure_mono pressure
+    square_5500x5500.vtu ConstViscosityThermalConvection_pcs_1_ts_149_t_50000000000.000000.vtu temperature_mono temperature
+)
+
+
 # PETSc/MPI
 AddTest(
     NAME LiquidFlow_LineDirichletNeumannBC
@@ -189,4 +204,19 @@ AddTest(
 #    mesh2D.vtu gravity_driven_pcs_1_ts_5_t_300_000000_0.vtu v_x_ref v_x
 #    mesh2D.vtu gravity_driven_pcs_1_ts_5_t_300_000000_0.vtu v_y_ref v_y
 
+)
+
+AddTest(
+    NAME StaggeredTH_ThermalConvectionFlow2D
+    PATH StaggeredCoupledProcesses/TH/ThermalConvection2D
+    EXECUTABLE ogs
+    EXECUTABLE_ARGS quad_5500x5500.prj
+    WRAPPER mpirun
+    WRAPPER_ARGS -np 1
+    TESTER vtkdiff
+    REQUIREMENTS OGS_USE_MPI
+    ABSTOL 1e-6 RELTOL 1e-6
+    DIFF_DATA
+    square_5500x5500.vtu ConstViscosityThermalConvection_pcs_1_ts_149_t_50000000000_000000_0.vtu pressure_mono pressure
+    square_5500x5500.vtu ConstViscosityThermalConvection_pcs_1_ts_149_t_50000000000_000000_0.vtu temperature_mono temperature
 )
