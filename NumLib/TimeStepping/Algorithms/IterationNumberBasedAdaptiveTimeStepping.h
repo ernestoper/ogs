@@ -62,7 +62,7 @@ namespace NumLib
  * Friedrich-Alexander-Universität Erlangen-Nürnberg.
  *
  */
-class IterationNumberBasedAdaptiveTimeStepping : public ITimeStepAlgorithm
+class IterationNumberBasedAdaptiveTimeStepping final : public ITimeStepAlgorithm
 {
 public:
     /**
@@ -93,24 +93,11 @@ public:
         const std::vector<double>& multiplier_vector);
 
     virtual ~IterationNumberBasedAdaptiveTimeStepping() {}
-    /// return the beginning of time steps
-    virtual double begin() const { return _t_initial; }
-    /// return the end of time steps
-    virtual double end() const { return _t_end; }
-    /// return current time step
-    virtual const TimeStep getTimeStep() const;
-
     /// move to the next time step
     virtual bool next();
 
     /// return if the current step is accepted
     virtual bool accepted() const;
-
-    /// return a history of time step sizes
-    virtual const std::vector<double>& getTimeStepSizeHistory() const
-    {
-        return this->_dt_vector;
-    }
 
     /// set the number of iterations
     void setNIterations(std::size_t n_itr) { this->_iter_times = n_itr; }
@@ -124,10 +111,6 @@ private:
     /// calculate the next time step size
     double getNextTimeStepSize() const;
 
-    /// initial time
-    const double _t_initial;
-    /// end time
-    const double _t_end;
     /// this vector stores the number of iterations to which the respective
     /// multiplier coefficient will be applied
     const std::vector<std::size_t> _iter_times_vector;
@@ -143,12 +126,6 @@ private:
     const std::size_t _max_iter;
     /// the number of nonlinear iterations
     std::size_t _iter_times;
-    /// previous time step
-    TimeStep _ts_pre;
-    /// current time step
-    TimeStep _ts_current;
-    /// history of time step sizes
-    std::vector<double> _dt_vector;
     /// the number of rejected steps
     std::size_t _n_rejected_steps;
 };
