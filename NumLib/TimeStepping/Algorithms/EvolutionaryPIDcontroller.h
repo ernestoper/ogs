@@ -11,7 +11,12 @@
 
 #pragma once
 
+#include <vector>
+#include <memory>
+
 #include "ITimeStepAlgorithm.h"
+
+#include "MathLib/LinAlg/LinAlg.h"
 
 namespace BaseLib
 {
@@ -45,13 +50,84 @@ namespace NumLib
  *
  *   Similar algorithm can be found in \cite ahmed2015adaptive .
  */
-class EvolutionaryPIDcontroller
+class EvolutionaryPIDcontroller final : public ITimeStepAlgorithm
 {
 public:
-    EvolutionaryPIDcontroller();
-    virtual ~EvolutionaryPIDcontroller();
+    EvolutionaryPIDcontroller(const double t0, const double t_end,
+                              const double h0, const double h_min,
+                              const double h_max, const double rel_h_min,
+                              const double rel_h_max,
+                              const std::vector<double>&& specific_times,
+                              const double tol,
+                              const MathLib::VecNormType norm_type)
+        : ITimeStepAlgorithm(t0, t_end),
+          _h0(h0),
+          _h_min(h_min),
+          _h_max(h_max),
+          _rel_h_min(rel_h_min),
+          _rel_h_max(rel_h_max),
+          _specific_times(std::move(specific_times)),
+          _tol(tol),
+          _norm_type(norm_type),
+          _e_n_minus1(0.),
+          _e_n_minus2(0.),
+          _is_accepted(true)
+    {
+    }
 
+    /**
+     * move to the next time step
+     * @param solution_error \f$e_n\f$, solution error between two successive
+                              time steps.
+     * @return true if the next step exists
+     */
+    bool next(const double solution_error) override;
+
+    /// return if current time step is accepted
+    bool accepted() const override { return _is_accepted; }
 private:
+    const double _kP = 0.075;
+    const double _kI = 0.175;
+    const double _kD = 0.01;
+
+    const double _h0;     ///< initial time step size.
+    const double _h_min;  ///< minimum step size.
+    const double _h_max;  ///< maximum step size.
+
+    /// \f$l\f$ in \f$ h_{\mbox{min}} \leq h_{n+1} \leq h_{\mbox{max}},\f$
+    const double _rel_h_min;
+    /// \f$L\f$ in \f$ h_{\mbox{min}} \leq h_{n+1} \leq h_{\mbox{max}},\f$
+    const double _rel_h_max;
+
+    // Given times that steps have to reach.
+    std::vector<double> _specific_times;
+
+    const double _tol;
+    const MathLib::VecNormType _norm_type;
+
+    double _e_n_minus1;  ///< \f$e_{n-1}\f$.
+    double _e_n_minus2;  ///< \f$e_{n-2}\f$.
+
+    bool _is_accepted;
+
+    double limitStepSize(const double h_new, const double h_n) const
+    {
+        const double h_in_range = std::max(_h_min, std::min(h_new, _h_max));
+        return std::max(_rel_h_min * h_n,
+                        std::min(h_in_range, _rel_h_max * h_n));
+    }
+
+    double checkSpecificTimeReached(const double h_new) const
+    {
+        if (_ts_current.current() + h_new;
+        return std::max(_rel_h_min * h_n,
+                        std::min(h_in_range, _rel_h_max * h_n));
+    }
 };
+
+/// Create an EvolutionaryPIDcontroller time stepper from the given
+/// configuration
+std::unique_ptr<ITimeStepAlgorithm> createEvolutionaryPIDcontroller(
+    BaseLib::ConfigTree const& config);
 
 }  // end of namespace NumLib

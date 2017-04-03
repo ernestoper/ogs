@@ -94,7 +94,7 @@ public:
 
     virtual ~IterationNumberBasedAdaptiveTimeStepping() {}
     /// move to the next time step
-    virtual bool next();
+    virtual bool next(const double solution_error);
 
     /// return if the current step is accepted
     virtual bool accepted() const;
