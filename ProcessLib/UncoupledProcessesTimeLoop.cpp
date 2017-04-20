@@ -495,9 +495,6 @@ bool solveOneTimeStepOneProcess(GlobalVector& x, std::size_t const timestep,
     bool nonlinear_solver_succeeded =
         nonlinear_solver.solve(x, coupling_term, post_iteration_callback);
 
-    auto& mat_strg = *process_data.mat_strg;
-    time_disc.pushState(t, x, mat_strg);
-
     return nonlinear_solver_succeeded;
 }
 
@@ -570,6 +567,57 @@ bool UncoupledProcessesTimeLoop::setCoupledSolutions()
     return true;
 }
 
+double UncoupledProcessesTimeLoop::computeTimeStepSize(const double t)
+{
+    bool all_steps_accepted = true;
+    // Get minimum time step size among step sizes of all processes.
+    double dt = std::numeric_limits<double>::max();
+    for (std::size_t i = 0; i < _per_process_data.size(); i++)
+    {
+        const auto& ppd = *_per_process_data[i];
+        const auto& timestepper = ppd.timestepper;
+        if (t > timestepper->end())  // skip the process that already stops
+            continue;
+
+        auto& time_disc = ppd.time_disc;
+        auto const& x = *_process_solutions[i];
+
+        const double solution_error =
+            (t == timestepper->begin())
+                ? 0.
+                : time_disc->getRelativeError(
+                      x, timestepper->getSolutionNormType());
+        if (!timestepper->next(solution_error))
+        {
+            all_steps_accepted = false;
+        }
+
+        if (timestepper->getTimeStep().dt() < dt)
+        {
+            dt = timestepper->getTimeStep().dt();
+        }
+    }
+
+    // Reset the time step with the minimum step size, dt
+    // Update the solution of the previous time step in time_disc.
+    for (std::size_t i = 0; i < _per_process_data.size(); i++)
+    {
+        const auto& ppd = *_per_process_data[i];
+        auto& timestepper = ppd.timestepper;
+        timestepper->resetCurrentTimeStep(dt);
+
+        if (!all_steps_accepted)
+        {
+            auto& time_disc = ppd.time_disc;
+            auto& mat_strg = *ppd.mat_strg;
+            auto const& x = *_process_solutions[i];
+            time_disc->pushState(t, x, mat_strg);
+        }
+    }
+
+    return dt;
+}
+
 /*
  * TODO:
  * Now we have a structure inside the time loop which is very similar to the
@@ -626,26 +674,13 @@ bool UncoupledProcessesTimeLoop::loop()
     std::size_t timestep = 1;  // the first timestep really is number one
     bool nonlinear_solver_succeeded = true;
 
+    double dt;  // = computeTimeStepSize(0.0, t, _per_process_data);
+
     while (t < _end_time)
     {
         BaseLib::RunTime time_timestep;
         time_timestep.start();
 
-        // Find the minimum time step size among the predicted step sizes of
-        // processes and step it as common time step size.
-        double dt = std::numeric_limits<double>::max();
-        for (std::size_t i = 0; i < _per_process_data.size(); i++)
-        {
-            const auto& timestepper = _per_process_data[i]->timestepper;
-            if (t > timestepper->end())  // skip the process that already stops
-                continue;
-
-            // TODO SOON          timestepper->next();
-            if (timestepper->getTimeStep().dt() < dt)
-            {
-                dt = timestepper->getTimeStep().dt();
-            }
-        }
         // Adjust step size if t < _end_time, while t+dt exceeds the end time
         if (t < _end_time && t + dt > _end_time)
         {
@@ -673,6 +708,8 @@ bool UncoupledProcessesTimeLoop::loop()
 
         INFO("[time] Time step #%u took %g s.", timestep,
              time_timestep.elapsed());
+
+        //      dt = computeTimeStepSize(solution_error, t, _per_process_data);
 
         timestep++;
 

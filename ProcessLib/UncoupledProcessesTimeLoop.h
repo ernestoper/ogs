@@ -112,6 +112,14 @@ private:
      */
     bool solveCoupledEquationSystemsByStaggeredScheme(
         const double t, const double dt, const std::size_t timestep_id);
+
+    /**
+     *  Find the minimum time step size among the predicted step sizes of
+     *  processes and step it as common time step size.
+     *
+     *  @param t           Current time
+     */
+    double computeTimeStepSize(const double t);
 };
 
 //! Builds an UncoupledProcessesTimeLoop from the given configuration.
